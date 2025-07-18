@@ -7,7 +7,7 @@ from core.logger import logger
 
 
 def with_session(func):
-    """Декоратор для управления сессией"""
+    """Декоратор для управления сессией."""
     @wraps(func)
     async def wrapper(self, *args, **kwargs):
         async with async_session() as session:
@@ -42,6 +42,11 @@ class UserRepository:
     @with_session
     async def update_user_role(self, user_id: int, role: str, *, session):
         try:
+            # Проверяем, существует ли пользователь
+            result = await session.execute(select(User).where(User.id == user_id))
+            if result.scalar_one_or_none() is None:
+                raise ValueError(f"User {user_id} not found")
+        
             role_enum = UserRole(role.lower())
             await session.execute(
                 update(User)
@@ -51,6 +56,9 @@ class UserRepository:
             await session.commit()
         except ValueError as e:
             raise ValueError(f"Invalid role: {role}") from e
+        except Exception as e:
+            logger.error(f"Unexpected error updating role: {str(e)}")
+            raise
 
 class BroadcastRepository:
     @with_session
