@@ -6,6 +6,7 @@ from aiogram.fsm.context import FSMContext
 
 from ..database import UserRepository, BroadcastRepository
 from core.logger import logger
+from core.db import async_session
 from ..services import parse_users_for_admin, parse_pending_brodcasts_for_admin
 from core.keyboards import get_roles_keyboard
 from core.filters import IsAdminFilter
@@ -74,7 +75,8 @@ async def process_role_selection(callback: CallbackQuery, state: FSMContext):
     user_id = data['user_id']
     
     try:
-        await user_repo.update_user_role(user_id, role)
+        async with async_session() as session:
+            await user_repo.update_user_role(user_id, role, session)
         await callback.message.edit_text(
             f"✅ Пользователю {user_id} успешно назначена роль {role}"
         )

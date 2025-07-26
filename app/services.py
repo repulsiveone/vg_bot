@@ -8,6 +8,7 @@ from aiogram.fsm.state import State, StatesGroup
 from collections import defaultdict
 
 from core.logger import logger
+from core.db import async_session
 from core.keyboards import get_confirmation_kb
 
 # Состояния FSM
@@ -172,6 +173,7 @@ async def execute_broadcast(bot: Bot, data: dict, users: list, callback: Callbac
             errors += 1
             logger.error(f"Error sending to {user.id}: {str(e)}")
     end_time = time.perf_counter()
+    # TODO при запланированной рассылке не пришел отчет
     result_text = f"✅ Успешно: {success}\n❌ Ошибок: {errors}\n⏰ Время выполнения: {end_time - start_time} сек."
     
     if callback:
@@ -182,15 +184,17 @@ async def execute_broadcast(bot: Bot, data: dict, users: list, callback: Callbac
 # Функции для админа
 async def parse_users_for_admin(user_repo):
     result = defaultdict(int)
-    all_users = await user_repo.get_users()
-    result['total'] = len(all_users)
-    for user in all_users:
-        result[user.role.value] += 1
-    return result
+    async with async_session() as session:
+        all_users = await user_repo.get_users(session)
+        result['total'] = len(all_users)
+        for user in all_users:
+            result[user.role.value] += 1
+        return result
 
 async def parse_pending_brodcasts_for_admin(broadcast_repo):
     result = {}
-    all_pending_broadcasts = await broadcast_repo.get_pending_broadcasts()
-    for br in all_pending_broadcasts:
-        result[br.id] = [br.created_by, br.scheduled_time]
-    return result
+    async with async_session() as session:
+        all_pending_broadcasts = await broadcast_repo.get_pending_broadcasts(session)
+        for br in all_pending_broadcasts:
+            result[br.id] = [br.created_by, br.scheduled_time]
+        return result

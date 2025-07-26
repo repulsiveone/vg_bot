@@ -10,6 +10,8 @@ from ..services import extract_buttons_from_text, ask_confirmation, safe_edit_me
 from core.keyboards import get_schedule_keyboard
 from core.filters import IsModeratorFilter
 from core.scheduler import save_and_schedule_broadcast
+from core.logger import logger
+from core.db import async_session
 
 
 router = Router()
@@ -100,10 +102,12 @@ async def process_media_broadcast(message: Message, state: FSMContext):
 @router.callback_query(BroadcastStates.waiting_for_confirmation, F.data == "broadcast_confirm")
 async def confirm_broadcast(callback: CallbackQuery, state: FSMContext, bot: Bot):
     data = await state.get_data()
-    users = await user_repo.get_users()
-    
-    await execute_broadcast(bot, data, users, callback)
-    await state.clear()
+    async with async_session() as session:
+        users = await user_repo.get_users(session)
+        logger.info(f"INFO: {data, data['content_type']}")
+
+        await execute_broadcast(bot, data, users, callback)
+        await state.clear()
 
 @router.callback_query(BroadcastStates.waiting_for_confirmation, F.data == "broadcast_schedule")
 async def show_schedule_options(callback: CallbackQuery, state: FSMContext):

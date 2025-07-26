@@ -33,7 +33,14 @@ broadcast_repo = BroadcastRepository()
 
 async def save_and_schedule_broadcast(data: dict, scheduled_time: datetime, user_id: int):
     """Сохраняет рассылку в БД и планирует задачу."""
-    broadcast = await broadcast_repo.save_schedule(user_id, data, scheduled_time, StatusBroadcast.PENDING)
+    async with async_session() as session:
+        broadcast = await broadcast_repo.save_schedule(
+            user_id,
+            data,
+            scheduled_time,
+            StatusBroadcast.PENDING,
+            session,
+            )
     
     # Планируем задачу
     scheduler.add_job(
