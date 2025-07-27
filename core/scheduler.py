@@ -2,6 +2,7 @@ import os
 from datetime import datetime
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
+from apscheduler.jobstores.redis import RedisJobStore
 from sqlalchemy import create_engine, select
 from dotenv import load_dotenv
 
@@ -9,6 +10,7 @@ from app.database import BroadcastRepository
 from app.models import StatusBroadcast, Broadcast, User
 from app.services import execute_broadcast
 from .db import async_session
+from .logger import logger
 
 
 load_dotenv()

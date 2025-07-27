@@ -6,6 +6,7 @@ from aiogram import Bot, Dispatcher
 from .handlers import home, moderator, administrator
 from core.db import init_db
 from core.scheduler import init_scheduler, scheduler
+from core.middlewares import setup_middlewares
 
 
 load_dotenv()
@@ -29,8 +30,9 @@ async def main():
     # 2. Создает экземпляры бота и диспетчера
     bot = Bot(token=os.environ.get("TG_TOKEN"))
     dp = Dispatcher()
-    
+
     # 3. Инициализация
+    setup_middlewares(dp)
     await on_startup(bot)
     
     # 4. Роутеры
