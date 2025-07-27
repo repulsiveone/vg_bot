@@ -182,19 +182,17 @@ async def execute_broadcast(bot: Bot, data: dict, users: list, callback: Callbac
     return success, errors, successful_users
 
 # Функции для админа
-async def parse_users_for_admin(user_repo):
+async def parse_users_for_admin(user_repo, session):
     result = defaultdict(int)
-    async with async_session() as session:
-        all_users = await user_repo.get_users(session)
-        result['total'] = len(all_users)
-        for user in all_users:
-            result[user.role.value] += 1
-        return result
+    all_users = await user_repo.get_users(session)
+    result['total'] = len(all_users)
+    for user in all_users:
+        result[user.role.value] += 1
+    return result
 
-async def parse_pending_brodcasts_for_admin(broadcast_repo):
+async def parse_pending_brodcasts_for_admin(broadcast_repo, session):
     result = {}
-    async with async_session() as session:
-        all_pending_broadcasts = await broadcast_repo.get_pending_broadcasts(session)
-        for br in all_pending_broadcasts:
-            result[br.id] = [br.created_by, br.scheduled_time]
-        return result
+    all_pending_broadcasts = await broadcast_repo.get_pending_broadcasts(session)
+    for br in all_pending_broadcasts:
+        result[br.id] = [br.created_by, br.scheduled_time]
+    return result

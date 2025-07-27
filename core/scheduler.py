@@ -33,16 +33,15 @@ async def init_scheduler(bot):
 
 broadcast_repo = BroadcastRepository()
 
-async def save_and_schedule_broadcast(data: dict, scheduled_time: datetime, user_id: int):
+async def save_and_schedule_broadcast(data: dict, scheduled_time: datetime, user_id: int, session):
     """Сохраняет рассылку в БД и планирует задачу."""
-    async with async_session() as session:
-        broadcast = await broadcast_repo.save_schedule(
-            user_id,
-            data,
-            scheduled_time,
-            StatusBroadcast.PENDING,
-            session,
-            )
+    broadcast = await broadcast_repo.save_schedule(
+        user_id,
+        data,
+        scheduled_time,
+        StatusBroadcast.PENDING,
+        session,
+        )
     
     # Планируем задачу
     scheduler.add_job(
@@ -54,29 +53,28 @@ async def save_and_schedule_broadcast(data: dict, scheduled_time: datetime, user
     )
     return broadcast
 
-async def execute_scheduled_broadcast(broadcast_id: int):
+async def execute_scheduled_broadcast(broadcast_id: int, session):
     """Выполнение запланированной рассылки."""
-    async with async_session() as session:
-        broadcast = await session.get(Broadcast, broadcast_id)
-        if not broadcast or broadcast.status != StatusBroadcast.PENDING:
-            return
-        
-        bot = scheduler._bot
-        users = await session.execute(select(User))
-        users = users.scalars().all()
-        
-        success, errors, successful_users = await execute_broadcast(
-            bot=bot,
-            data=broadcast.content,
-            users=users
-        )
-        
-        # Обновляем статус
-        broadcast.status = StatusBroadcast.SENT
-        broadcast.stats = {
-            "total": len(users),
-            "success": success,
-            "errors": errors
-        }
-        
-        await session.commit()
+    broadcast = await session.get(Broadcast, broadcast_id)
+    if not broadcast or broadcast.status != StatusBroadcast.PENDING:
+        return
+    
+    bot = scheduler._bot
+    users = await session.execute(select(User))
+    users = users.scalars().all()
+    
+    success, errors, successful_users = await execute_broadcast(
+        bot=bot,
+        data=broadcast.content,
+        users=users
+    )
+    
+    # Обновляем статус
+    broadcast.status = StatusBroadcast.SENT
+    broadcast.stats = {
+        "total": len(users),
+        "success": success,
+        "errors": errors
+    }
+    
+    await session.commit()

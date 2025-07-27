@@ -12,23 +12,22 @@ router = Router()
 user = UserRepository()
 
 @router.message(Command("start"))
-async def cmd_start_user(message: Message):
+async def cmd_start_user(message: Message, session):
     """Обработка начальной команды."""
-    async with async_session() as session:
-        curr_user = await user.create_user_or_return(
-            user_id=message.from_user.id,
-            username=message.from_user.username,
-            session=session
-            )
-        if curr_user.role == UserRole.ADMIN:
-            await message.answer(
-                "Панель администратора",
-                reply_markup=get_admin_keyboard()
-            )
-        elif curr_user.role == UserRole.MODERATOR:
-            await message.answer(
-                "Панель модератора",
-                reply_markup=get_moderator_keyboard()
-            )
-        else:
-            await message.answer("Вы подписались на рассылку")
+    curr_user = await user.create_user_or_return(
+        user_id=message.from_user.id,
+        username=message.from_user.username,
+        session=session
+        )
+    if curr_user.role == UserRole.ADMIN:
+        await message.answer(
+            "Панель администратора",
+            reply_markup=get_admin_keyboard()
+        )
+    elif curr_user.role == UserRole.MODERATOR:
+        await message.answer(
+            "Панель модератора",
+            reply_markup=get_moderator_keyboard()
+        )
+    else:
+        await message.answer("Вы подписались на рассылку")

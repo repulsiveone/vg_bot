@@ -1,6 +1,6 @@
 from aiogram import Dispatcher
 
-from db import async_session
+from ..db import async_session
 from .database import DatabaseMiddleware
 
 

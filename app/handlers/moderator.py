@@ -100,14 +100,13 @@ async def process_media_broadcast(message: Message, state: FSMContext):
     await ask_confirmation(message, state)
 
 @router.callback_query(BroadcastStates.waiting_for_confirmation, F.data == "broadcast_confirm")
-async def confirm_broadcast(callback: CallbackQuery, state: FSMContext, bot: Bot):
+async def confirm_broadcast(callback: CallbackQuery, state: FSMContext, bot: Bot, session):
     data = await state.get_data()
-    async with async_session() as session:
-        users = await user_repo.get_users(session)
-        logger.info(f"INFO: {data, data['content_type']}")
+    users = await user_repo.get_users(session)
+    logger.info(f"INFO: {data, data['content_type']}")
 
-        await execute_broadcast(bot, data, users, callback)
-        await state.clear()
+    await execute_broadcast(bot, data, users, callback)
+    await state.clear()
 
 @router.callback_query(BroadcastStates.waiting_for_confirmation, F.data == "broadcast_schedule")
 async def show_schedule_options(callback: CallbackQuery, state: FSMContext):
@@ -120,7 +119,7 @@ async def show_schedule_options(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
 
 @router.callback_query(BroadcastStates.waiting_for_schedule_time, F.data.startswith("schedule_"))
-async def handle_schedule_selection(callback: CallbackQuery, state: FSMContext):
+async def handle_schedule_selection(callback: CallbackQuery, state: FSMContext, session):
     """Обрабатывает выбор времени."""
     action = callback.data.split("_")[1]
     
@@ -147,7 +146,8 @@ async def handle_schedule_selection(callback: CallbackQuery, state: FSMContext):
     broadcast = await save_and_schedule_broadcast(
         data, 
         scheduled_time, 
-        callback.from_user.id
+        callback.from_user.id,
+        session
     )
     
     await callback.message.edit_text(
@@ -158,7 +158,7 @@ async def handle_schedule_selection(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
 
 @router.message(BroadcastStates.waiting_for_custom_time, F.text.regexp(r'\d{2}\.\d{2}\.\d{4} \d{2}:\d{2}'))
-async def handle_custom_time(message: Message, state: FSMContext):
+async def handle_custom_time(message: Message, state: FSMContext, session):
     """Обрабатывает ручной ввод времени."""
     try:
         scheduled_time = datetime.strptime(message.text, "%d.%m.%Y %H:%M")
@@ -170,7 +170,8 @@ async def handle_custom_time(message: Message, state: FSMContext):
         broadcast = await save_and_schedule_broadcast(
             data, 
             scheduled_time, 
-            message.from_user.id
+            message.from_user.id,
+            session,
         )
         
         await message.answer(

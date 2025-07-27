@@ -22,9 +22,9 @@ class RoleStates(StatesGroup):
     waiting_for_role_selection = State()
 
 @router.message(Command("all_users"), IsAdminFilter())
-async def get_all_users(message: Message):
+async def get_all_users(message: Message, session):
     """Подсчет всех пользователей по ролям."""
-    list_of_users = await parse_users_for_admin(user_repo)
+    list_of_users = await parse_users_for_admin(user_repo, session)
     result = ""
     for key, value in list_of_users.items():
         result += f"{key}: {value}\n"
@@ -33,9 +33,9 @@ async def get_all_users(message: Message):
     )
 
 @router.message(Command("all_broadcasts"), IsAdminFilter())
-async def get_all_broadcasts(message: Message):
+async def get_all_broadcasts(message: Message, session):
     """Просмотр запланированных рассылок."""
-    list_of_broadcasts = await parse_pending_brodcasts_for_admin(broadcast_repo)
+    list_of_broadcasts = await parse_pending_brodcasts_for_admin(broadcast_repo, session)
     result = ""
     for value in list_of_broadcasts.values():
         result += f"Модератор: {value[0]} | Запланированное время: {value[1]}\n"
@@ -63,7 +63,7 @@ async def process_user_id(message: Message, state: FSMContext):
     await state.set_state(RoleStates.waiting_for_role_selection)
 
 @router.callback_query(RoleStates.waiting_for_role_selection, F.data.startswith("role_"))
-async def process_role_selection(callback: CallbackQuery, state: FSMContext):
+async def process_role_selection(callback: CallbackQuery, state: FSMContext, session):
     role = callback.data.split("_")[1]
     
     if role == "cancel":
@@ -75,8 +75,7 @@ async def process_role_selection(callback: CallbackQuery, state: FSMContext):
     user_id = data['user_id']
     
     try:
-        async with async_session() as session:
-            await user_repo.update_user_role(user_id, role, session)
+        await user_repo.update_user_role(user_id, role, session)
         await callback.message.edit_text(
             f"✅ Пользователю {user_id} успешно назначена роль {role}"
         )
